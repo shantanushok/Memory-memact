@@ -611,6 +611,23 @@ function emptyMemoryStore(previous = {}) {
   });
 }
 
+/**
+ * Computes aggregate stats for a memory store. Shared by reindexMemoryStore,
+ * buildMemoryStore, and applyMemoryAction to avoid duplicated filter passes.
+ * @param {Array} memories
+ * @param {Object} graph
+ * @returns {Object}
+ */
+export function computeStoreStats(memories = [], graph = { nodes: [] }) {
+  return {
+    memoryCount: memories.length,
+    activityMemoryCount: memories.filter((memory) => memory.type === "activity_memory").length,
+    intentMemoryCount: memories.filter(isIntentMemory).length,
+    schemaMemoryCount: memories.filter(isSchemaMemory).length,
+    sourceCount: graph.nodes ? graph.nodes.filter((node) => node.type === "source_memory").length : 0,
+  };
+}
+
 export function reindexMemoryStore(memoryStore = {}) {
   const memories = Array.isArray(memoryStore.memories) ? memoryStore.memories : [];
   const relations = (Array.isArray(memoryStore.relations) ? memoryStore.relations : []).map(normalizeRelationInput);
@@ -629,13 +646,7 @@ export function reindexMemoryStore(memoryStore = {}) {
     graph,
     actions: Array.isArray(memoryStore.actions) ? memoryStore.actions : [],
     graph_snapshots: Array.isArray(memoryStore.graph_snapshots) ? memoryStore.graph_snapshots : [],
-    stats: {
-      memoryCount: memories.length,
-      activityMemoryCount: memories.filter((memory) => memory.type === "activity_memory").length,
-      intentMemoryCount: memories.filter(isIntentMemory).length,
-      schemaMemoryCount: memories.filter(isSchemaMemory).length,
-      sourceCount: graph.nodes.filter((node) => node.type === "source_memory").length,
-    },
+    stats: computeStoreStats(memories, graph),
   };
 }
 
@@ -727,13 +738,7 @@ export function buildMemoryStore({ inference, schema, intent, previousMemory = n
     cognitive_schema_memories: merged.filter(isSchemaMemory),
     graph,
     actions: Array.isArray(previousMemory?.actions) ? previousMemory.actions : [],
-    stats: {
-      memoryCount: merged.length,
-      activityMemoryCount: merged.filter((memory) => memory.type === "activity_memory").length,
-      intentMemoryCount: merged.filter(isIntentMemory).length,
-      schemaMemoryCount: merged.filter(isSchemaMemory).length,
-      sourceCount: graph.nodes.filter((node) => node.type === "source_memory").length,
-    },
+    stats: computeStoreStats(merged, graph),
   };
 }
 
@@ -871,23 +876,6 @@ export function retrieveMemories(query, memoryStore, options = {}) {
     // or just pass them through with the audit flag attached for the worker to handle.
     .sort((left, right) => right.retrieval_score - left.retrieval_score || right.strength - left.strength)
     .slice(0, top);
-
-  // Generate an atomic audit trail log payload matching the SQL structure
-  const auditEntry = {
-    id: `audit:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
-    client_id: clientId,
-    queried_path: queriedPath,
-    result_count: results.length,
-    timestamp: new Date().toISOString()
-  };
-
-  // Attach the compliance record to the resulting array object transparently 
-  // so wrappers can safely record it to database/state logs.
-  Object.defineProperty(results, "auditTrailLog", {
-    value: auditEntry,
-    writable: false,
-    enumerable: true
-  });
 
   return results;
 }
@@ -1484,13 +1472,7 @@ function applyMemoryAction(memoryStore, action, mutate) {
     graph: buildMemoryGraph(memories, memoryStore.relations || []),
     relations: memoryStore.relations || [],
     actions: [...(memoryStore.actions || []), finalAction],
-    stats: {
-      ...(memoryStore.stats || {}),
-      memoryCount: memories.length,
-      activityMemoryCount: memories.filter((memory) => memory.type === "activity_memory").length,
-      intentMemoryCount: memories.filter(isIntentMemory).length,
-      schemaMemoryCount: memories.filter(isSchemaMemory).length,
-    },
+    stats: computeStoreStats(memories, buildMemoryGraph(memories, memoryStore.relations || [])),
   };
   return { memoryStore: next, action: finalAction };
 }

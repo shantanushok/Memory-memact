@@ -31,7 +31,10 @@
     "./embeddings": "./src/embeddings.mjs",
     "./memory-stats": "./src/memory-stats.mjs",
     "./stats-server": "./src/stats-server.mjs",
-    "./read-write-executor": "./src/read-write-executor.mjs"
+    "./read-write-executor": "./src/read-write-executor.mjs",
+    "./telemetry": "./src/telemetry.mjs",
+    "./telemetry-metrics": "./src/telemetry-metrics.mjs",
+    "./instrumented-engine": "./src/instrumented-engine.mjs"
   },
   "keywords": [
     "memact",

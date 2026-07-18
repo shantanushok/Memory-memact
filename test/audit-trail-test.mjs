@@ -26,6 +26,8 @@ const results = eng.retrieveMemories("Sample", mockStore, {
 assert.ok(auditEvents.length > 0, "Audit telemetry event must be emitted on retrieval.");
 assert.strictEqual(auditEvents[0].type, "memory.retrieved");
 assert.ok(typeof auditEvents[0].payload.result_count === "number");
+assert.strictEqual(auditEvents[0].payload.client_id, "compliance_test_client_44");
+assert.strictEqual(auditEvents[0].payload.queried_path, "user.profile.memories");
 assert.ok(auditEvents[0].duration_ms >= 0, "Duration must be recorded.");
 
 console.log("✅ Query audit trail tracking (via telemetry) behaves perfectly!");

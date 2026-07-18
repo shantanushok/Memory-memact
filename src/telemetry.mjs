@@ -47,6 +47,19 @@ function generateTraceId() {
 }
 
 /**
+ * Resolves a valid W3C trace ID from context or generates a new one.
+ * @param {Object} [context={}]
+ * @returns {string}
+ */
+function resolveTraceId(context = {}) {
+  const traceId = context.trace_id;
+  if (typeof traceId === "string" && /^[0-9a-f]{32}$/i.test(traceId)) {
+    return traceId;
+  }
+  return generateTraceId();
+}
+
+/**
  * Creates a new TelemetryEvent object.
  * @param {string} type - One of TELEMETRY_EVENTS
  * @param {Object} [payload={}] - Event-specific data
@@ -57,7 +70,7 @@ function createEvent(type, payload = {}, context = {}) {
   return Object.freeze({
     type,
     timestamp: new Date().toISOString(),
-    trace_id: context.trace_id || generateTraceId(),
+    trace_id: resolveTraceId(context),
     duration_ms: context.duration_ms ?? null,
     memory_id: payload.memory_id || null,
     operation: type,
@@ -70,7 +83,7 @@ function createEvent(type, payload = {}, context = {}) {
  * span timing, buffered flush, and metrics aggregation.
  *
  * @param {Object} [options={}]
- * @param {number} [options.bufferSize=200] - Max events to buffer before auto-flush
+ * @param {number} [options.bufferSize=200] - Max events to retain in buffer (oldest events are dropped when exceeded
  * @param {boolean} [options.enabled=true] - Master enable/disable toggle
  * @returns {Object} Collector instance
  *
@@ -84,7 +97,7 @@ function createEvent(type, payload = {}, context = {}) {
  * span.end({ memory_id: "m_01" });
  */
 export function createTelemetryCollector(options = {}) {
-  const bufferSize = Number(options.bufferSize ?? 200);
+  const bufferSize = Math.max(0, Number(options.bufferSize ?? 200) || 0);
   const enabled = options.enabled !== false;
 
   /** @type {Map<string, Set<Function>>} */
@@ -190,7 +203,7 @@ export function createTelemetryCollector(options = {}) {
    * @returns {{ end: (payload?: Object) => Object }}
    */
   function startSpan(eventType, context = {}) {
-    const traceId = context.trace_id || generateTraceId();
+    const traceId = resolveTraceId(context);
     const startTime = performance.now();
     let ended = false;
 

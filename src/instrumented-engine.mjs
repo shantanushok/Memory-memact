@@ -30,10 +30,10 @@ function instrumentSync(collector, metrics, eventType, fn, extractPayload) {
     try {
       const result = fn(...args);
       const payload = extractPayload ? extractPayload(args, result) : {};
-      span.end(payload);
+      const event = span.end(payload);
       metrics.operationTotal.inc(1, { type: eventType });
-      if (typeof span.end === "function" && payload.duration_ms) {
-        metrics.operationDuration.observe(payload.duration_ms);
+      if (event && event.duration_ms != null) {
+        metrics.operationDuration.observe(event.duration_ms);
       }
       return result;
     } catch (error) {

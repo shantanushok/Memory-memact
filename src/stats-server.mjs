@@ -21,12 +21,12 @@ export function isLoopbackAddress(addr) {
  *   GET /metrics  — telemetry metrics snapshot (new)
  *   GET /health   — liveness probe (new)
  *
- * @param {{ loadMemories: () => Promise<object[]>, now?: () => number, collector?: Object, logger?: Function }} options
+ * @param {{ loadMemories: () => Promise<object[]>, now?: () => number, collector?: Object }} options
  * @returns {import("node:http").Server}
  */
 export function createStatsServer({
   loadMemories,
-  now = Date.now,
+  now = now(),
   collector = null,
 } = {}) {
   if (typeof loadMemories !== "function") {
@@ -53,7 +53,7 @@ export function createStatsServer({
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({
           status: "ok",
-          uptime_ms: Date.now() - serverStartTime,
+          uptime_ms: now() - serverStartTime,
           memory_count: Array.isArray(memories) ? memories.length : 0,
         }));
       } catch (err) {

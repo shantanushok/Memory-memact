@@ -5,9 +5,9 @@ import {
   TELEMETRY_EVENTS,
 } from "../src/telemetry.mjs";
 
-// ---------------------------------------------------------------------------
+
 // Collector — creation and event emission
-// ---------------------------------------------------------------------------
+
 
 test("createTelemetryCollector creates a functional collector", () => {
   const collector = createTelemetryCollector();
@@ -96,9 +96,7 @@ test("subscriber errors do not break event emission", () => {
   assert.strictEqual(received.length, 1);
 });
 
-// ---------------------------------------------------------------------------
 // Collector — span timing
-// ---------------------------------------------------------------------------
 
 test("collector.startSpan measures duration on end", async () => {
   const collector = createTelemetryCollector();
@@ -126,16 +124,15 @@ test("span.end can only be called once", async () => {
 
 test("span shares trace_id from context", () => {
   const collector = createTelemetryCollector();
+  const validTraceId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   const span = collector.startSpan(TELEMETRY_EVENTS.MEMORY_CREATED, {
-    trace_id: "trace:custom-123",
+    trace_id: validTraceId,
   });
   const event = span.end({});
-  assert.strictEqual(event.trace_id, "trace:custom-123");
+  assert.strictEqual(event.trace_id, validTraceId);
 });
 
-// ---------------------------------------------------------------------------
 // Collector — flush and sinks
-// ---------------------------------------------------------------------------
 
 test("collector.flush drains buffer and invokes sinks", () => {
   const collector = createTelemetryCollector();
@@ -162,9 +159,7 @@ test("sink errors do not propagate", () => {
   assert.doesNotThrow(() => collector.flush());
 });
 
-// ---------------------------------------------------------------------------
 // Collector — metrics
-// ---------------------------------------------------------------------------
 
 test("collector.getMetrics returns operation counts and durations", () => {
   const collector = createTelemetryCollector();
@@ -185,9 +180,7 @@ test("collector.getMetrics tracks error count", () => {
   assert.strictEqual(metrics["memory.created"].errors, 1);
 });
 
-// ---------------------------------------------------------------------------
 // Collector — reset
-// ---------------------------------------------------------------------------
 
 test("collector.reset clears all state", () => {
   const collector = createTelemetryCollector();
@@ -199,9 +192,7 @@ test("collector.reset clears all state", () => {
   assert.deepStrictEqual(collector.getMetrics(), {});
 });
 
-// ---------------------------------------------------------------------------
 // Collector — buffer limit
-// ---------------------------------------------------------------------------
 
 test("collector respects buffer size limit", () => {
   const collector = createTelemetryCollector({ bufferSize: 3 });
@@ -213,9 +204,7 @@ test("collector respects buffer size limit", () => {
   assert.strictEqual(collector.getBuffer().length, 3);
 });
 
-// ---------------------------------------------------------------------------
 // Disabled collector
-// ---------------------------------------------------------------------------
 
 test("disabled collector returns null from emit", () => {
   const collector = createTelemetryCollector({ enabled: false });

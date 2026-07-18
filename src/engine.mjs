@@ -169,7 +169,7 @@ function tokenSet(value) {
 function calculateFuzzyMatchScore(stringA, stringB) {
   const s1 = (stringA || "").toLowerCase().trim();
   const s2 = (stringB || "").toLowerCase().trim();
-  
+
   if (s1 === s2) return 1.0;
   if (!s1 || !s2) return 0.0;
 
@@ -183,7 +183,7 @@ function calculateFuzzyMatchScore(stringA, stringB) {
   for (let i = 0; i < s1.length; i++) {
     const start = Math.max(0, i - matchWindow);
     const end = Math.min(s2.length, i + matchWindow + 1);
-    
+
     for (let j = start; j < end; j++) {
       if (!s2Matches[j] && s1[i] === s2[j]) {
         s1Matches[i] = true;
@@ -223,7 +223,7 @@ export function overlapScore(query, memory) {
   const summaryFuzzy = calculateFuzzyMatchScore(queryString, summaryString);
 
   const highestFuzzyScore = Math.max(labelFuzzy, summaryFuzzy);
-  
+
   // Return fuzzy matching score if it meets a reasonable confidence threshold (e.g., > 0.7)
   return highestFuzzyScore > 0.7 ? highestFuzzyScore : 0.0;
 }
@@ -428,7 +428,7 @@ function decayMemory(memory, options = {}) {
   const ageDays = daysSince(memory.last_seen_at || memory.first_seen_at);
   const decay = Math.min(0.35, ageDays * decayPerDay);
   const decayedStrength = clamp(Number(memory.strength || 0) - decay);
-  
+
   // Calculate automated TTL expiration trigger thresholds
   let expirationReason = "";
   let state = memory.state || "active";
@@ -618,7 +618,7 @@ function emptyMemoryStore(previous = {}) {
  * @param {Object} graph
  * @returns {Object}
  */
-export function computeStoreStats(memories = [], graph = { nodes: [] }) {
+function computeStoreStats(memories = [], graph = { nodes: [] }) {
   return {
     memoryCount: memories.length,
     activityMemoryCount: memories.filter((memory) => memory.type === "activity_memory").length,
@@ -849,7 +849,7 @@ export function retrieveMemories(query, memoryStore, options = {}) {
         searchScore = (lexical * (1 - alpha)) + (semantic * alpha);
       }
       const score = clamp((searchScore * 0.56) + (Number(memory.strength || 0) * 0.34) + (isSchemaMemory(memory) ? 0.1 : 0));
-      
+
       const BaseResult = {
         ...memory,
         retrieval_score: score,
@@ -862,7 +862,7 @@ export function retrieveMemories(query, memoryStore, options = {}) {
       if (auditContext) {
         const textToAudit = `${query} ${memory.label} ${memory.summary}`;
         const audit = auditContextLeakage(auditContext, textToAudit);
-        
+
         BaseResult.audit = {
           leaked: audit.leaked,
           violations: audit.violations
@@ -877,6 +877,13 @@ export function retrieveMemories(query, memoryStore, options = {}) {
     .sort((left, right) => right.retrieval_score - left.retrieval_score || right.strength - left.strength)
     .slice(0, top);
 
+  results.auditTrailLog = {
+    id: `audit:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
+    client_id: clientId,
+    queried_path: queriedPath,
+    result_count: results.length,
+    timestamp: new Date().toISOString(),
+  };
   return results;
 }
 
@@ -1462,6 +1469,7 @@ function applyMemoryAction(memoryStore, action, mutate) {
     return mutate(memory);
   });
   const finalAction = matched ? action : { ...action, accepted: false, reason: "memory not found" };
+  const nextGraph = buildMemoryGraph(memories, memoryStore.relations || []);
   const next = {
     ...memoryStore,
     memories,
@@ -1469,10 +1477,10 @@ function applyMemoryAction(memoryStore, action, mutate) {
     intent_memories: memories.filter(isIntentMemory),
     schema_packets: memories.filter(isSchemaMemory),
     cognitive_schema_memories: memories.filter(isSchemaMemory),
-    graph: buildMemoryGraph(memories, memoryStore.relations || []),
+    graph: nextGraph,
     relations: memoryStore.relations || [],
     actions: [...(memoryStore.actions || []), finalAction],
-    stats: computeStoreStats(memories, buildMemoryGraph(memories, memoryStore.relations || [])),
+    stats: computeStoreStats(memories, nextGraph),
   };
   return { memoryStore: next, action: finalAction };
 }
@@ -1496,7 +1504,7 @@ function isIntentMemory(memory) {
   return memory?.type === "intent_memory";
 }
 // Stores historical genre weights to maintain a running baseline profile
-let USER_MEDIA_BASELINE = new Map(); 
+let USER_MEDIA_BASELINE = new Map();
 const BASELINE_DECAY = 0.95; // Keeps baseline adaptable but stable
 const ANOMALY_THRESHOLD = 0.70; // Sensitivity limit for structural signature shifts
 
@@ -1565,18 +1573,18 @@ export function clearMediaBaseline() {
  */
 export function purgeExpiredRecords(records = []) {
   if (!Array.isArray(records)) return [];
-  
+
   const currentTime = Date.now();
-  
+
   return records.filter(record => {
     // Check if the record has an expiration or self-destruct timestamp
     const expirationTime = record.selfDestructAt || record.expiresAt;
-    
+
     if (expirationTime) {
       // If the current time has reached or passed expiration, drop the record (return false)
       return currentTime < new Date(expirationTime).getTime();
     }
-    
+
     // Keep records that don't have an expiration attribute
     return true;
   });

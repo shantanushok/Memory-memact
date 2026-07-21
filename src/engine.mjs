@@ -224,8 +224,8 @@ export function overlapScore(query, memory) {
 
   const highestFuzzyScore = Math.max(labelFuzzy, summaryFuzzy);
 
-  // Return fuzzy matching score if it meets a reasonable confidence threshold (e.g., > 0.7)
-  return highestFuzzyScore > 0.7 ? highestFuzzyScore : 0.0;
+  // Return fuzzy matching score if it meets a reasonable confidence threshold (e.g., > 0.65)
+  return highestFuzzyScore > 0.65 ? highestFuzzyScore : 0.0;
 }
 
 /**

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
 import { buildMemoryStore, buildRagContext, formatMemoryReport, retrieveMemories } from "./engine.mjs";
+import { createEmbeddingService } from "./embeddings.mjs";
 
 function argValue(name, fallback = "") {
   const index = process.argv.indexOf(name);
@@ -18,6 +19,12 @@ const previousPath = argValue("--memory");
 const query = argValue("--query");
 const format = argValue("--format", "report");
 const graphLimit = Number(argValue("--limit", "24")) || 24;
+
+const accessToken = argValue("--access-token");
+const oauthClientId = argValue("--oauth-client-id");
+const oauthClientSecret = argValue("--oauth-client-secret");
+const oauthEndpoint = argValue("--oauth-endpoint");
+const provider = argValue("--embedding-provider");
 
 if (!inferencePath && !schemaPath) {
   console.error("Usage: memact-memory --inference inference.json --schema schema.json [--memory memory.json] [--query thought] [--format report|json|graph|mermaid|dot]");
@@ -155,8 +162,25 @@ function formatDot(memoryStore, limit = 24) {
 }
 
 if (query) {
-  const rag = buildRagContext(query, memoryStore);
-  const result = retrieveMemories(query, memoryStore);
+  const options = {};
+  if (accessToken) {
+    options.accessToken = accessToken;
+  }
+  
+  if (oauthClientId && oauthClientSecret && oauthEndpoint) {
+    const service = createEmbeddingService({
+      provider: provider || "openai",
+      oauth: {
+        clientId: oauthClientId,
+        clientSecret: oauthClientSecret,
+        tokenEndpoint: oauthEndpoint
+      }
+    });
+    options.queryEmbedding = await service.getEmbedding(query);
+  }
+
+  const rag = buildRagContext(query, memoryStore, options);
+  const result = retrieveMemories(query, memoryStore, options);
   if (format === "json") {
     console.log(JSON.stringify({ query, rag, memories: result }, null, 2));
   } else {

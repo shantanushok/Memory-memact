@@ -214,6 +214,8 @@ export function createInstrumentedEngine(options = {}) {
         return {
           query: String(args[0] || "").slice(0, 120),
           result_count: results.length,
+          client_id: results.auditTrailLog?.client_id,
+          queried_path: results.auditTrailLog?.queried_path,
         };
       }
     ),

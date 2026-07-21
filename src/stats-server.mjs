@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { logDatabaseSize } from "./telemetry.mjs";
 import { computeMemoryStats } from "./memory-stats.mjs";
 
 const LOOPBACK_ADDRS = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
@@ -26,8 +27,9 @@ export function isLoopbackAddress(addr) {
  */
 export function createStatsServer({
   loadMemories,
-  now = now(),
+  now = Date.now,
   collector = null,
+  logger = console.log,
 } = {}) {
   if (typeof loadMemories !== "function") {
     throw new TypeError("createStatsServer requires loadMemories to be a function");
@@ -89,6 +91,7 @@ export function createStatsServer({
     // Default endpoint — existing memory stats behavior
     try {
       const memories = await loadMemories();
+      logDatabaseSize({ memories }, logger);
       const stats = computeMemoryStats(memories, { now: now() });
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(stats));

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { computeMemoryStats } from "../src/memory-stats.mjs";
-import { isLoopbackAddress } from "../src/stats-server.mjs";
+import { isLoopbackAddress, createStatsServer } from "../src/stats-server.mjs";
 
 // ---------------------------------------------------------------------------
 // activeCount
@@ -177,4 +177,31 @@ test("isLoopbackAddress returns false for 0.0.0.0", () => {
 
 test("isLoopbackAddress returns false for empty string", () => {
   assert.ok(!isLoopbackAddress(""));
+});
+
+// ---------------------------------------------------------------------------
+// createStatsServer telemetry logging
+// ---------------------------------------------------------------------------
+
+test("createStatsServer logs database size on each stats request", async () => {
+  const logs = [];
+  const fakeMemories = [{ id: "m_01", status: "active" }, { id: "m_02", status: "active" }];
+
+  const server = createStatsServer({
+    loadMemories: async () => fakeMemories,
+    logger: (line) => logs.push(line),
+  });
+
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+
+  const response = await fetch(`http://127.0.0.1:${port}/`);
+  await response.json();
+
+  await new Promise((resolve) => server.close(resolve));
+
+  assert.equal(logs.length, 1);
+  const parsed = JSON.parse(logs[0]);
+  assert.equal(parsed.event, "database_size");
+  assert.equal(parsed.memoryCount, 2);
 });

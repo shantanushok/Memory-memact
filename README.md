@@ -53,6 +53,27 @@ node ./scripts/memory-backup.mjs restore --in backup.json --out restored.json
 
 These operations are also available programmatically through `backup-restore.mjs`.
 
+## Vector Search & Embeddings OAuth
+
+Memact Memory supports retrieving memories using hybrid semantic search. To securely integrate with enterprise embedding providers (like Azure OpenAI) and restrict search access, Memory implements an OAuth 2.0 Client Credentials flow.
+
+### Inbound Authorization
+When querying via the API or CLI, clients must provide a JWT containing either the `vector:search` or `vector:read` scope to access semantic capabilities.
+```sh
+node ./src/cli.mjs --query "startup execution" \
+  --access-token "header.eyJzY29wZSI6InZlY3RvcjpzZWFyY2gifQ.sig"
+```
+
+### Outbound Authentication
+You can configure Memory to acquire its own Bearer tokens dynamically to invoke external embedding models, eliminating the need to hardcode static API keys.
+```sh
+node ./src/cli.mjs --query "startup execution" \
+  --oauth-client-id "client_123" \
+  --oauth-client-secret "secret_456" \
+  --oauth-endpoint "https://auth.enterprise.com/token" \
+  --embedding-provider "azure"
+```
+
 ## Development
 
 To install and run tests:

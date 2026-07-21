@@ -134,6 +134,19 @@ test("span shares trace_id from context", () => {
   assert.strictEqual(event.trace_id, validTraceId);
 });
 
+//checking for invalid trace_id
+
+test("span rejects invalid trace_id and generates a new W3C-compliant one", () => {
+  const collector = createTelemetryCollector();
+  const invalidTraceId = "trace:custom-123";
+  const span = collector.startSpan(TELEMETRY_EVENTS.MEMORY_CREATED, {
+    trace_id: invalidTraceId,
+  });
+  const event = span.end({});
+  assert.notStrictEqual(event.trace_id, invalidTraceId);
+  assert.match(event.trace_id, /^[0-9a-f]{32}$/i);
+});
+
 // Collector — flush and sinks
 
 test("collector.flush drains buffer and invokes sinks", () => {
